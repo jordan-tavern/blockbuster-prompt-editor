@@ -14,16 +14,69 @@ remotion-jobs/out/
 editor-workspaces/*
 !editor-workspaces/.gitkeep
 
-# ── Large media (video / audio binaries) — keep locally for Remotion preview; not in git ──
+# ═══════════════════════════════════════════════════════════════════════════
+# Media & large binaries — do not commit (GitHub 100MB hard limit; LFS not used)
+# Patterns apply anywhere in the tree unless negated with ! below.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Video
 *.mp4
 *.mov
-*.webm
 *.m4v
+*.webm
+*.mkv
+*.avi
+*.mpeg
+*.mpg
+*.m2ts
+*.mts
+# (do not use *.ts — would ignore TypeScript; use *.m2ts / .mts for transport streams)
+*.flv
+*.wmv
+*.3gp
+
+# Audio
 *.wav
 *.mp3
 *.m4a
 *.aac
-# Optional: user-uploaded images in sample tree
+*.flac
+*.ogg
+*.opus
+*.wma
+*.aiff
+*.aif
+
+# Raster / stills (b-roll, exports, screenshots — add locally; keep .gitkeep in empty dirs)
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.heic
+*.exr
+*.psd
+
+# Archives / disk images often used for media bundles
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.dmg
+*.iso
+
+# Common local dump folders (absolute-style paths from repo root)
+frames/
+rivet_frames/
+thumbnails/
+whisper_output/
+
+# Sample / upload trees (fonts + small JSON like vo.json stay tracked via negation if needed)
 remotion-jobs/public/uploads/
 
-# Fonts and small JSON (e.g. vo.json) remain tracked
+# If you must track a tiny PNG/JPEG inside remotion-jobs/public/, whitelist it explicitly, e.g.:
+# !remotion-jobs/public/icons/logo-16.png
