@@ -1,0 +1,20 @@
+{
+  "name": "rivet-ai-ad",
+  "version": "1.0.0",
+  "description": "Budzinski-style 30s advocacy ad for Congresswoman McDonald Rivet",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render RivetAd out/RivetAd.mp4"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@remotion/cli": "4.0.432",
+    "@remotion/player": "4.0.432",
+    "@remotion/renderer": "4.0.432",
+    "@types/react": "19.2.14",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.432",
+    "typescript": "5.9.3"
+  }
+}

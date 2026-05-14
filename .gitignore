@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.DS_Store
+# Secrets and local overrides (never commit)
+.env
+.env.*
+!.env.example
+.uploads-tmp/
+.editor-projects.json
+**/.editor-versions/
+remotion-jobs/node_modules/
+remotion-jobs/out/
+# Imported Blockbuster workspaces (large); recreate via Import in the UI
+editor-workspaces/*
+!editor-workspaces/.gitkeep
+
+# ── Large media (video / audio binaries) — keep locally for Remotion preview; not in git ──
+*.mp4
+*.mov
+*.webm
+*.m4v
+*.wav
+*.mp3
+*.m4a
+*.aac
+# Optional: user-uploaded images in sample tree
+remotion-jobs/public/uploads/
+
+# Fonts and small JSON (e.g. vo.json) remain tracked
