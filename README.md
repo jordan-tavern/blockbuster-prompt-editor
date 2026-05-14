@@ -2,9 +2,9 @@
 
 A **local-first** web app for editing **Remotion** video compositions: a bundled **Rivet** sample (`remotion-jobs/`) and **Blockbuster** ads imported into isolated workspaces (`editor-workspaces/`). The UI includes a Remotion **Player**, **timeline** (Rivet layers or Blockbuster simple tracks), **Monaco** source editor, **chat/agent** panel, **asset server** search, **right‑click → replace clip** for Blockbuster projects, versioning, undo, uploads, preview proxy, and render hooks.
 
-This repository is the **application root** (Vite + Express live here alongside `remotion-jobs/`).
+This directory is the **application root** within [`tavern-research/delivery-video`](https://github.com/tavern-research/delivery-video) (Vite + Express live here alongside `remotion-jobs/`).
 
-**GitHub:** [jordan-tavern/blockbuster-prompt-editor](https://github.com/jordan-tavern/blockbuster-prompt-editor) — default branch **`main`**.
+**Canonical path on GitHub:** [`products/blockbuster-prompt-editor`](https://github.com/tavern-research/delivery-video/tree/main/products/blockbuster-prompt-editor) on branch **`main`**.
 
 ---
 
