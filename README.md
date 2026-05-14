@@ -4,6 +4,8 @@ A **local-first** web app for editing **Remotion** video compositions: a bundled
 
 This repository is the **application root** (Vite + Express live here alongside `remotion-jobs/`).
 
+**GitHub:** [jordan-tavern/blockbuster-prompt-editor](https://github.com/jordan-tavern/blockbuster-prompt-editor) — default branch **`main`**.
+
 ---
 
 ## Features (high level)
