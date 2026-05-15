@@ -224,8 +224,9 @@ export const App: React.FC = () => {
   // Mark preview as stale when edits happen
   const handleEditApplied = useCallback(async () => {
     await refreshUndoCount();
+    await refreshProject();
     if (previewUrl) setPreviewStale(true);
-  }, [refreshUndoCount, previewUrl]);
+  }, [refreshUndoCount, refreshProject, previewUrl]);
 
   const handleDragEnd = useCallback(async (overlayIndex: number, top: number, left: number) => {
     if (project?.timelineMode !== "rivet") return;

@@ -260,6 +260,48 @@ function stripCommonMediaExt(id: string): string {
   return id.replace(/\.(mp4|mov|webm|mkv|wav|mp3|m4a|aac|jpg|jpeg|png|webp)$/i, "");
 }
 
+/** Public bucket paths without a V4 signed query always 403 for anonymous reads. */
+function isBarePublicGcsPipelineUrl(urlStr: string): boolean {
+  if (!urlStr.includes("storage.googleapis.com")) return false;
+  if (!urlStr.includes("video-pipeline-asset-store") && !urlStr.includes("video-pipeline-results-store")) {
+    return false;
+  }
+  return !urlStr.includes("X-Goog-Algorithm=");
+}
+
+/**
+ * GCS V4 signed URLs embed `X-Goog-Date` + `X-Goog-Expires` (seconds). After that window, GCS
+ * returns 400 ExpiredToken — treat as unusable so hydration re-signs from `assetId`.
+ */
+function gcsV4SignedUrlStillWithinLifetime(urlStr: string): boolean {
+  if (!urlStr.includes("storage.googleapis.com") || !urlStr.includes("X-Goog-Algorithm=")) {
+    return true;
+  }
+  try {
+    const u = new URL(urlStr);
+    const dateStr = u.searchParams.get("X-Goog-Date");
+    const expStr = u.searchParams.get("X-Goog-Expires");
+    if (!dateStr || expStr === null) return true;
+    const expiresSec = parseInt(expStr, 10);
+    if (!Number.isFinite(expiresSec) || expiresSec < 0) return true;
+    const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(dateStr);
+    if (!m) return true;
+    const signingMs = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    const expiryMs = signingMs + expiresSec * 1000;
+    const clockSkewMs = 120_000;
+    return Date.now() < expiryMs - clockSkewMs;
+  } catch {
+    return true;
+  }
+}
+
+function mediaUrlLooksResolvable(url: unknown): boolean {
+  if (typeof url !== "string" || url.length === 0) return false;
+  if (isBarePublicGcsPipelineUrl(url)) return false;
+  if (!gcsV4SignedUrlStillWithinLifetime(url)) return false;
+  return true;
+}
+
 function formatUuidFrom32Hex(hex: string): string {
   const h = hex.toLowerCase();
   if (h.length !== 32 || !/^[0-9a-f]{32}$/.test(h)) return h;
@@ -324,7 +366,7 @@ async function hydrateVoiceoverObject(
     return;
   }
 
-  const urlOk = typeof v.url === "string" && v.url.length > 0;
+  const urlOk = mediaUrlLooksResolvable(v.url);
   const assetId = typeof v.assetId === "string" && v.assetId.trim() ? String(v.assetId).trim() : "";
   if (!urlOk && assetId) {
     try {
@@ -406,7 +448,7 @@ export async function hydrateBlockbusterCompositionData(
       clips.map(async (item) => {
         if (!item || typeof item !== "object") return item;
         const c = { ...(item as Record<string, unknown>) };
-        const urlOk = typeof c.url === "string" && c.url.length > 0;
+        const urlOk = mediaUrlLooksResolvable(c.url);
         if (!urlOk && typeof c.assetId === "string" && c.assetId.trim()) {
           c.url = await signedUrlClipFlexible(c.assetId);
         }
@@ -418,7 +460,7 @@ export async function hydrateBlockbusterCompositionData(
   const bt = out.backingTrack;
   if (bt && typeof bt === "object") {
     const b = { ...(bt as Record<string, unknown>) };
-    const urlOk = typeof b.url === "string" && b.url.length > 0;
+    const urlOk = mediaUrlLooksResolvable(b.url);
     if (!urlOk && typeof b.assetId === "string" && b.assetId.trim()) {
       b.url = await signedUrlBackingFlexible(String(b.assetId));
     }
@@ -440,7 +482,7 @@ export async function hydrateBlockbusterCompositionData(
       pa.map(async (item) => {
         if (!item || typeof item !== "object") return item;
         const o = { ...(item as Record<string, unknown>) };
-        const urlOk = typeof o.url === "string" && o.url.length > 0;
+        const urlOk = mediaUrlLooksResolvable(o.url);
         if (!urlOk && typeof o.assetId === "string" && o.assetId.trim()) {
           o.url = await signedUrlUnindexedFlexible(String(o.assetId));
         }
@@ -472,7 +514,7 @@ export async function hydrateBlockbusterCompositionDataLenient(
         continue;
       }
       const c = { ...(item as Record<string, unknown>) };
-      const urlOk = typeof c.url === "string" && c.url.length > 0;
+      const urlOk = mediaUrlLooksResolvable(c.url);
       if (!urlOk && typeof c.assetId === "string" && c.assetId.trim()) {
         try {
           c.url = await signedUrlClipFlexible(String(c.assetId));
@@ -488,7 +530,7 @@ export async function hydrateBlockbusterCompositionDataLenient(
   const bt = out.backingTrack;
   if (bt && typeof bt === "object") {
     const b = { ...(bt as Record<string, unknown>) };
-    const urlOk = typeof b.url === "string" && b.url.length > 0;
+    const urlOk = mediaUrlLooksResolvable(b.url);
     if (!urlOk && typeof b.assetId === "string" && b.assetId.trim()) {
       try {
         b.url = await signedUrlBackingFlexible(String(b.assetId));
@@ -516,7 +558,7 @@ export async function hydrateBlockbusterCompositionDataLenient(
         continue;
       }
       const o = { ...(item as Record<string, unknown>) };
-      const urlOk = typeof o.url === "string" && o.url.length > 0;
+      const urlOk = mediaUrlLooksResolvable(o.url);
       if (!urlOk && typeof o.assetId === "string" && o.assetId.trim()) {
         try {
           o.url = await signedUrlUnindexedFlexible(String(o.assetId));

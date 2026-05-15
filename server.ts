@@ -85,31 +85,96 @@ async function readAllEditable(project: ProjectRecord): Promise<Record<string, s
 // Projects API
 // ═══════════════════════════════════════════════
 
-async function readCompositionDefaultProps(
+function coercePositiveInt(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return Math.round(v);
+  if (typeof v === "string" && v.trim()) {
+    const n = parseInt(v.trim(), 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+/**
+ * Blockbuster TSX compositions almost always declare `const durationInFrames = N;` at module scope.
+ * That value can drift ahead of `composition-meta.json` after manual edits; use it so Player/timeline match the TSX.
+ */
+async function readCompositionModuleDurationFrames(project: ProjectRecord): Promise<number | null> {
+  if (!project.id.startsWith("bb-")) return null;
+  const mod = project.compositionModule;
+  if (typeof mod !== "string" || !mod.endsWith(".tsx")) return null;
+  try {
+    const fp = path.join(project.rootDir, "src", mod);
+    const raw = await fs.readFile(fp, "utf-8");
+    const m = /\bconst\s+durationInFrames\s*=\s*(\d+)\s*;/.exec(raw);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readCompositionMetaClientSlice(
   project: ProjectRecord
-): Promise<Record<string, unknown> | undefined> {
+): Promise<{
+  defaultProps?: Record<string, unknown>;
+  durationInFrames?: number;
+  fps?: number;
+  width?: number;
+  height?: number;
+} | null> {
   try {
     const raw = await fs.readFile(path.join(project.rootDir, "src", "composition-meta.json"), "utf-8");
-    const meta = JSON.parse(raw) as { defaultProps?: unknown };
+    const meta = JSON.parse(raw) as Record<string, unknown>;
+    const slice: {
+      defaultProps?: Record<string, unknown>;
+      durationInFrames?: number;
+      fps?: number;
+      width?: number;
+      height?: number;
+    } = {};
     const dp = meta.defaultProps;
-    if (dp && typeof dp === "object" && !Array.isArray(dp)) return dp as Record<string, unknown>;
+    if (dp && typeof dp === "object" && !Array.isArray(dp)) {
+      slice.defaultProps = dp as Record<string, unknown>;
+    }
+    const dif = coercePositiveInt(meta.durationInFrames);
+    if (dif != null) slice.durationInFrames = dif;
+    const fps = coercePositiveInt(meta.fps);
+    if (fps != null) slice.fps = fps;
+    const w = coercePositiveInt(meta.width);
+    if (w != null) slice.width = w;
+    const h = coercePositiveInt(meta.height);
+    if (h != null) slice.height = h;
+    return Object.keys(slice).length > 0 ? slice : null;
   } catch {
-    /* no composition-meta (e.g. rivet) */
+    return null;
   }
-  return undefined;
 }
 
 async function currentProjectClientPayload(project: ProjectRecord) {
-  const compositionDefaultProps = await readCompositionDefaultProps(project);
+  const metaSlice = await readCompositionMetaClientSlice(project);
+  const compositionDefaultProps = metaSlice?.defaultProps;
+
+  let durationInFrames =
+    metaSlice?.durationInFrames != null ? metaSlice.durationInFrames : project.durationInFrames;
+  const tsxDur = await readCompositionModuleDurationFrames(project);
+  if (tsxDur != null) {
+    durationInFrames = Math.max(durationInFrames, tsxDur);
+  }
+
+  const fps = metaSlice?.fps != null ? metaSlice.fps : project.fps;
+  const width = metaSlice?.width != null ? metaSlice.width : project.width;
+  const height = metaSlice?.height != null ? metaSlice.height : project.height;
+
   return {
     id: project.id,
     label: project.label,
     compositionId: project.compositionId,
     compositionModule: project.compositionModule,
-    fps: project.fps,
-    width: project.width,
-    height: project.height,
-    durationInFrames: project.durationInFrames,
+    fps,
+    width,
+    height,
+    durationInFrames,
     srcRootRel: clientSrcRootRel(project),
     timelineMode: project.id === "rivet" ? "rivet" : "simple",
     ...(compositionDefaultProps != null ? { compositionDefaultProps } : {}),
